@@ -146,10 +146,20 @@ class Coinone(BaseBroker):
         return self.request_public("orderbook", payload=payload)
 
     @public_api
+    def orderbook_avg(self, symbol):
+        orders = self.orderbook(symbol)
+        sum = 0
+        cnt = 0
+        for bid in orders.get('bid'):
+            sum += float(bid.get('price')) * float(bid.get('qty'))
+            cnt += float(bid.get('qty'))
+        return sum / cnt
+
+    @public_api
     def price(self, symbol):
         payload = {"currency": symbol}
         ret = self.request_public("ticker", payload=payload)
-        return ret.get("last")
+        return float(ret.get("last"))
 
     @public_api
     def recent_trade(self, symbol):
@@ -164,7 +174,7 @@ class Coinone(BaseBroker):
 
     @public_api
     def volume_24h(self, symbol):
-        return self.ticker(symbol).get("volume")
+        return float(self.ticker(symbol).get("volume"))
 
 
 if __name__ == "__main__":

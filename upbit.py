@@ -113,7 +113,7 @@ class Upbit(BaseBroker):
 
     @public_api
     def volume_24h(self, symbol):
-        return self.ticker(symbol).get("acc_trade_volume")
+        return float(self.ticker(symbol).get("acc_trade_volume"))
 
     @public_api
     def price(self, symbol, detail=False):
@@ -170,6 +170,22 @@ class Upbit(BaseBroker):
         return ret
 
     @public_api
+    def orderbook_avg(self, symbole):
+        outstading_orders = self.orderbook(symbol)
+        arrysize = 1 if single else 15
+        sum_sell_price = 0
+        sum_sell_count = 0
+        sum_buy_price = 0
+        sum_buy_count = 0
+        for orders in outstading_orders["orderbook_units"]:
+            sum_sell_price += orders["ask_price"] * orders["ask_size"]
+            sum_sell_count += orders["ask_size"]
+            sum_buy_price += orders["bid_price"] * orders["bid_size"]
+            sum_buy_count += orders["bid_size"]
+        avg = (sum_sell_price + sum_buy_price) / (sum_sell_count + sum_buy_count)
+        return avg
+
+    @public_api
     def possible_orders(self, symbol):
         query = {"market": self.__symbol(symbol)}
         print("@@@", query)
@@ -209,4 +225,4 @@ if __name__ == "__main__":
     print(upbit.possible_orders("ada"))
 
     print(upbit.price("ada"))
-    print(upbit.buy("ada", 1580, 10))
+    #print(upbit.buy("ada", 1580, 10))
