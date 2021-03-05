@@ -32,7 +32,7 @@ while True:
         simulation = False
         cprint("Confirmed! Starting trade...", color="green", attrs=["bold"])
         break
-    elif confirm = start_simulate_magic:
+    elif confirm == start_simulate_magic:
         simulation = True
         cprint("Confirmed! Starting simulation...", color="green", attrs=["bold"])
         break
