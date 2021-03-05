@@ -23,11 +23,17 @@ cprint(f"Trading amount : {trade_won} KRW  {trade_qty} {symbol.upper()}", color=
 
 
 while True:
-    magic_word = "trade"
-    cprint(f'Type "trade" to confirm...', color="blue", attrs=["bold"])
+    start_trading_magic = "trade"
+    start_simulate_magic = "simulate"
+    simulation = True
+    cprint(f'Type "{start_trading_magic}" to do a real trading and type "{start_simulate_magic}" to do a simulation...', color="blue", attrs=["bold"])
     confirm = input()
-    if confirm == magic_word:
+    if confirm == start_trading_magic:
+        simulation = False
         cprint("Confirmed! Starting trade...", color="green", attrs=["bold"])
         break
-
-trading_algorithm(broker, symbol, trade_qty, simulation=False)
+    elif confirm = start_simulate_magic:
+        simulation = True
+        cprint("Confirmed! Starting simulation...", color="green", attrs=["bold"])
+        break
+trading_algorithm(broker, symbol, trade_qty, simulation=simulation)

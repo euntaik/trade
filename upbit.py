@@ -129,14 +129,15 @@ class Upbit(BrokerBase):
         )
 
     def _order_complete(self, uuid):
-        cprint(f"Waiting for order {uuid}", color="grey")
+        cprint(f"Waiting for order {uuid}")
         while True:
             status = self.check_order(uuid)
             print(".", end="")
             if status is None or status["state"] == "done":
-                return True
+                print()
+                break
             time.sleep(0.2)
-        cprint(f"Order complete!", color="grey")
+        cprint(f"Order complete!")
         return
 
     @private_api

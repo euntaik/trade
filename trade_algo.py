@@ -29,13 +29,13 @@ def simple_sell_after_buy(broker: BrokerBase, symbol, trade_qty, simulation=True
                 xact_result = broker.buy(symbol, current_price, trade_qty, sync=True)
                 if xact_result.status == Status.FAIL:
                     continue
-                buy_price = current_price
-                msg = colored('BOUGHT', color='green', attrs=['bold'])
-                cprint(f'{msg} at {buy_price}')
             net_profit -= (current_price - trade_fee) * trade_qty
             share_count += trade_qty
             last_xaction = "buy"
-        elif last_xaction == "buy" and current_price > expected_price and current_price > (buy_price + trade_fee_per_curr_price):
+            buy_price = current_price
+            msg = colored('BOUGHT', color='green', attrs=['bold'])
+            cprint(f'{msg} at {buy_price}')
+        elif last_xaction == "buy" and current_price > expected_price and current_price > (buy_price + trade_fee_per_curr_price*2):
             # sell
             print()
             if not simulation:
@@ -43,11 +43,11 @@ def simple_sell_after_buy(broker: BrokerBase, symbol, trade_qty, simulation=True
                 if xact_result.status == Status.FAIL:
                     continue
                 sell_price = current_price
-                msg = colored('SOLD', color='red', attrs=['bold'])
-                cprint(f'{msg} at {sell_price}')
-                cprint(f"Net profit:{net_profit}")
             net_profit += (current_price - trade_fee) * trade_qty
             share_count -= trade_qty
             last_xaction = "sell"
+            msg = colored('SOLD', color='red', attrs=['bold'])
+            cprint(f'{msg} at {sell_price}')
+            cprint(f"Net profit:{net_profit}")
 
         
