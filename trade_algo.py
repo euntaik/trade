@@ -21,14 +21,14 @@ def simple_sell_after_buy(broker, symbol, trade_qty, simulation=True):
         if current_price < expected_price and last_xaction == 'sell':
             # buy
             if not simulation:
-                broker.buy(symbol, current_price, trade_qty)
+                broker.buy(symbol, current_price, trade_qty, sync=True)
             net_profit -= (current_price - trade_fee) * trade_qty
             share_count += trade_qty
             last_xaction = 'buy'
         elif current_price > expected_price and last_xaction == 'buy':
             # sell
             if not simulation:
-                broker.sell(symbol, current_price, trade_qty)
+                broker.sell(symbol, current_price, trade_qty, sync=True)
             net_profit += (current_price - trade_fee) * trade_qty
             share_count -= trade_qty
             last_xaction = 'sell'

@@ -4,9 +4,12 @@ import json
 import jwt
 import uuid
 import hashlib
+import time
+import asyncio
 from urllib.parse import urlencode
 from decorators import private_api, public_api
 from broker import BaseBroker, Order
+from termcolor import colored, cprint
 
 ACCESS_KEY = os.environ["UPBIT_OPEN_API_ACCESS_KEY"]
 SECRET_KEY = os.environ["UPBIT_OPEN_API_SECRET_KEY"]
@@ -17,11 +20,14 @@ class Upbit(BaseBroker):
         self.server_url = "https://api.upbit.com"
         self.api_url = f"{self.server_url}/v{version}"
         self.market = {}
+        self.waitloop = asyncio.get_event_loop()
 
     def request(self, api, payload=None, headers=None, method="GET"):
         method = requests.post if method == "POST" else requests.get
         url = f"{self.server_url}{api}"
         response = method(url, params=payload, headers=headers)
+        if response.status_code != 200:
+            cprint(response.text, color='red')
         return response.json()
 
     def request_public(self, api, payload=None, headers=None, method="GET"):
@@ -56,6 +62,36 @@ class Upbit(BaseBroker):
 
         return self.request_private("/v1/accounts", headers=headers)
 
+    def _get_authorization_header(self, query):
+        query_string = urlencode(query).encode()
+
+        m = hashlib.sha512()
+        m.update(query_string)
+        query_hash = m.hexdigest()
+
+        payload = {
+            'access_key': ACCESS_KEY,
+            'nonce': str(uuid.uuid4()),
+            'query_hash': query_hash,
+            'query_hash_alg': 'SHA512',
+        }
+
+        jwt_token = jwt.encode(payload, SECRET_KEY)
+        authorize_token = 'Bearer {}'.format(jwt_token)
+        headers = {"Authorization": authorize_token}
+
+        return headers
+
+    def check_order(self, uuid):
+        query = {"uuid" : uuid}
+        headers = self._get_authorization_header(query)
+        ret = self.request_private("/v1/orders", payload=query, headers=headers, method="GET")
+        if not ret:
+            return None
+        if type(ret) is list:
+            ret = ret[0]
+        return ret
+
     @private_api
     def _order(self, order_type: Order, symbol, price, qty):
         if order_type == Order.BUY:
@@ -69,41 +105,55 @@ class Upbit(BaseBroker):
             "price": price,
             "ord_type": "limit",
         }
-        query_string = urlencode(query).encode()
+        headers = self._get_authorization_header(query)
 
-        m = hashlib.sha512()
-        m.update(query_string)
-        query_hash = m.hexdigest()
-
-        payload = {
-            "access_key": ACCESS_KEY,
-            "nonce": str(uuid.uuid4()),
-            "query_hash": query_hash,
-            "query_hash_alg": "SHA512",
-        }
-
-        jwt_token = jwt.encode(payload, SECRET_KEY)
-        authorize_token = "Bearer {}".format(jwt_token)
-        headers = {"Authorization": authorize_token}
         return self.request_private(
             "/v1/orders", payload=query, headers=headers, method="POST"
         )
 
+    def _order_complete(self, uuid):
+        while True:
+            status = self.check_order(uuid)
+            print('.', end='')
+            if status is None or status['state'] == 'done':
+                return status
+            time.sleep(0.2)
+
     @private_api
-    def buy(self, symbol, price, qty, safety_check=True):
+    def buy(self, symbol, price, qty, safety_check=True, sync=True):
+        """
+        params:
+            sync: wait ultil the order goes through
+        """
         symbol = self.__symbol(symbol)
         if safety_check:
             if not self.check_buy_price(symbol, price):
                 return
-        return self._order(Order.BUY, symbol, price, qty)
+        ret = self._order(Order.BUY, symbol, price, qty)
+
+        if sync:
+            uuid = ret['uuid']
+            cprint(f'Waiting for order {uuid}', color='grey')
+            ret = self._order_complete(uuid)
+            cprint(f'Order complete!', color='grey')
+        
+        return ret
 
     @private_api
-    def sell(self, symbol, price, qty, safety_check=True):
+    def sell(self, symbol, price, qty, safety_check=True, sync=True):
         symbol = self.__symbol(symbol)
         if safety_check:
             if not self.check_sell_price(symbol, price):
                 return
-        return self._order(Order.SELL, symbol, price, qty)
+        ret = self._order(Order.SELL, symbol, price, qty)
+
+        if sync:
+            uuid = ret['uuid']
+            cprint(f'Waiting for order {uuid}', color='grey')
+            ret = self._order_complete(uuid)
+            cprint(f'Order complete!', color='grey')
+        
+        return ret
 
     @public_api
     def ticker(self, symbol):
@@ -225,3 +275,5 @@ if __name__ == "__main__":
 
     print(upbit.price("ada"))
     #print(upbit.buy("ada", 1580, 10))
+
+    print(upbit.buy('dka', upbit.price('dka'), 50))

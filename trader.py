@@ -10,8 +10,8 @@ broker = Broker()
 trading_algorithm = simple_sell_after_buy
 symbol = 'dka'
 current_price = broker.price(symbol)
-trade_won = 1000.00
-trade_qty = 1000.00 / current_price
+trade_won = 10000.00
+trade_qty = 10000.00 / current_price
 
 trade_volume = broker.volume_24h(symbol)
 
