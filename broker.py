@@ -16,7 +16,7 @@ class BaseBroker:
             return False
         return True
 
-    def check_sell_price(self, symbo, price):
+    def check_sell_price(self, symbol, price):
         current_price = self.price(symbol)
         if float(price) < float(current_price):
             print(

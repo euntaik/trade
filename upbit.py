@@ -170,9 +170,8 @@ class Upbit(BaseBroker):
         return ret
 
     @public_api
-    def orderbook_avg(self, symbole):
+    def orderbook_avg(self, symbol):
         outstading_orders = self.orderbook(symbol)
-        arrysize = 1 if single else 15
         sum_sell_price = 0
         sum_sell_count = 0
         sum_buy_price = 0
