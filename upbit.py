@@ -86,7 +86,7 @@ class Upbit(BrokerBase):
         query = {"uuid": uuid}
         headers = self._get_authorization_header(query)
         ret = self.request_private(
-            "/v1/orders", payload=query, headers=headers, method="GET"
+            "/v1/order", payload=query, headers=headers, method="GET"
         )
         if not ret:
             return None
@@ -109,7 +109,6 @@ class Upbit(BrokerBase):
         sell_fee = float(ret.get("ask_fee"))
         return max(buy_fee, sell_fee)
 
-    @private_api
     def _order(self, order_type: Order, symbol, price, qty):
         if order_type == Order.BUY:
             order = "bid"
@@ -128,7 +127,7 @@ class Upbit(BrokerBase):
             "/v1/orders", payload=query, headers=headers, method="POST"
         )
 
-    def _order_complete(self, uuid):
+    def _wait_order_complete(self, uuid):
         cprint(f"Waiting for order {uuid}")
         while True:
             status = self.check_order(uuid)
@@ -157,7 +156,7 @@ class Upbit(BrokerBase):
 
         if sync:
             uuid = ret["uuid"]
-            self._order_complete(uuid)
+            self._wait_order_complete(uuid)
             result.status = Status.SUCCESS
 
         return result
@@ -174,7 +173,7 @@ class Upbit(BrokerBase):
 
         if sync:
             uuid = ret["uuid"]
-            self._order_complete(uuid)
+            self._wait_order_complete(uuid)
             result.status = Status.SUCCESS
 
         return result
@@ -302,3 +301,4 @@ if __name__ == "__main__":
 
     print(upbit.price("btc"))
     print(upbit.trade_fee("btc"))
+    print(upbit.check_order('f8aa1ed2-f021-4c40-95b9-6f51fa01ed79'))
