@@ -129,12 +129,15 @@ class Upbit(BrokerBase):
         )
 
     def _order_complete(self, uuid):
+        cprint(f"Waiting for order {uuid}", color="grey")
         while True:
             status = self.check_order(uuid)
             print(".", end="")
             if status is None or status["state"] == "done":
                 return True
             time.sleep(0.2)
+        cprint(f"Order complete!", color="grey")
+        return
 
     @private_api
     def buy(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
@@ -153,9 +156,7 @@ class Upbit(BrokerBase):
 
         if sync:
             uuid = ret["uuid"]
-            cprint(f"Waiting for order {uuid}", color="grey")
             self._order_complete(uuid)
-            cprint(f"Order complete!", color="grey")
             result.status = Status.SUCCESS
 
         return result
@@ -172,9 +173,7 @@ class Upbit(BrokerBase):
 
         if sync:
             uuid = ret["uuid"]
-            cprint(f"Waiting for order {uuid}", color="grey")
             self._order_complete(uuid)
-            cprint(f"Order complete!", color="grey")
             result.status = Status.SUCCESS
 
         return result
