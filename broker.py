@@ -66,7 +66,7 @@ class BrokerBase(metaclass=ABCMeta):
         current_price = self.price(symbol)
         if float(price) < float(current_price):
             print(
-                f"You were trying to SELL {symbol} at price({price}) higher than the current price({current_price})!"
+                f"You were trying to SELL {symbol} at price({price}) lower than the current price({current_price})!"
             )
             return False
         return True

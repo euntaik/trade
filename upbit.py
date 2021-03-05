@@ -26,7 +26,7 @@ class Upbit(BrokerBase):
         method = requests.post if method == "POST" else requests.get
         url = f"{self.server_url}{api}"
         response = method(url, params=payload, headers=headers)
-        if response.status_code < 200 and response.status_code >= 300:
+        if response.status_code < 200 or response.status_code >= 300:
             cprint(f"[{response.status_code}] {response.text}", color="red")
         return response.json()
 
@@ -165,7 +165,7 @@ class Upbit(BrokerBase):
         symbol = self.__symbol(symbol)
         if safety_check:
             if not self.check_sell_price(symbol, price):
-                return
+                return XactResult(Status.FAIL, {})
         ret = self._order(Order.SELL, symbol, price, qty)
 
         result = XactResult(Status.WAITING, ret)
