@@ -9,14 +9,14 @@ import httplib2
 import time
 import base64
 import hmac
-from broker import BaseBroker, Order
+from broker import *
 from decorators import private_api, public_api
 
 ACCESS_TOKEN = access_token = os.environ["COINONE_ACCESS_TOKEN"]
 SECRET_KEY = secret_key = bytes(os.environ["COINONE_SECRET_KEY"], "utf-8")
 
 
-class Coinone(BaseBroker):
+class Coinone(BrokerBase):
     def __init__(self, version=1):
         self.server_url = "https://api.coinone.co.kr/"
         self.api_url = f"{self.server_url}"
@@ -34,7 +34,9 @@ class Coinone(BaseBroker):
         return signature.hexdigest()
 
     def request_private(self, action, payload, method="POST"):
-        url = "{}{}".format(self.api_url, action)
+        url = f"{self.api_url}{action}"
+        if "access_token" not in payload:
+            payload["access_token"] = ACCESS_TOKEN
 
         encoded_payload = self.__get_encoded_payload(payload)
 
@@ -49,7 +51,7 @@ class Coinone(BaseBroker):
             url, method, body=encoded_payload, headers=headers
         )
 
-        return content
+        return json.loads(content)
 
     def request_public(self, api, payload=None, method="GET"):
         url = f"{self.api_url}/{api}/"
@@ -59,63 +61,55 @@ class Coinone(BaseBroker):
         return ret
 
     @private_api
+    @private_api
+    def trade_fee(self, symbol):
+        payload = {"currency": symbol}
+        ret = self.request_private("v2/account/user_info", payload=payload)
+        fee_rate = ret["userInfo"]["feeRate"][symbol.lower()]
+        return max(float(fee_rate["taker"]), float(fee_rate["maker"]))
+
+    @private_api
     def account_balance(self):
-        payload = {"access_token": ACCESS_TOKEN}
-        response = self.request_private("v2/account/balance", payload=payload)
-        ret = json.loads(response)
+        payload = {}
+        ret = self.request_private("v2/account/balance", payload=payload)
         return ret
 
     @private_api
-    def buy(self, symbol, price, qty, safety_check=True):
+    def buy(self, symbol, price, qty, safety_check=True) -> XactResult:
         if safety_check:
             if not self.check_buy_price(symbol, price):
-                return
+                return XactResult(Status.FAIL, {})
 
-        response = self.request_private(
+        ret = self.request_private(
             "v2/order/limit_buy",
-            payload={
-                "access_token": ACCESS_TOKEN,
-                "price": str(price),
-                "qty": qty,
-                "currency": symbol,
-            },
+            payload={"price": str(price), "qty": qty, "currency": symbol},
         )
-        ret = json.loads(response)
-        return ret
+        return XactResult(Status.SUCCESS, ret)
 
     @private_api
-    def sell(self, symbol, price, qty, safety_check=True):
+    def sell(self, symbol, price, qty, safety_check=True) -> XactResult:
         if safety_check:
             if not self.check_sell_price(symbol, price):
-                return
+                return XactResult(Status.FAIL, {})
 
-        response = self.request_private(
+        ret = self.request_private(
             "v2/order/limit_buy",
-            payload={
-                "access_token": ACCESS_TOKEN,
-                "price": str(price),
-                "qty": qty,
-                "currency": symbol,
-            },
+            payload={"price": str(price), "qty": qty, "currency": symbol},
         )
-        ret = json.loads(response)
-        return ret
+        return XactResult(Status.SUCCESS, ret)
 
     @private_api
     def my_orders(self, symbol):
-        response = self.request_private(
-            "v2/order/limit_orders",
-            payload={"access_token": ACCESS_TOKEN, "currency": symbol},
+        ret = self.request_private(
+            "v2/order/limit_orders", payload={"currency": symbol}
         )
-        ret = json.loads(response)
         return ret
 
     @private_api
     def cancel_order(self, symbol, order_id, price, qty, is_sell):
-        response = self.request_private(
+        ret = self.request_private(
             action="v2/order/cancel",
             payload={
-                "access_token": ACCESS_TOKEN,
                 "order_id": order_id,
                 "price": price,
                 "qty": qty,
@@ -123,7 +117,6 @@ class Coinone(BaseBroker):
                 "currency": symbol,
             },
         )
-        ret = json.loads(response)
         return ret
 
     @private_api
@@ -150,9 +143,9 @@ class Coinone(BaseBroker):
         orders = self.orderbook(symbol)
         sum = 0
         cnt = 0
-        for bid in orders.get('bid'):
-            sum += float(bid.get('price')) * float(bid.get('qty'))
-            cnt += float(bid.get('qty'))
+        for bid in orders.get("bid"):
+            sum += float(bid.get("price")) * float(bid.get("qty"))
+            cnt += float(bid.get("qty"))
         return sum / cnt
 
     @public_api
@@ -178,19 +171,19 @@ class Coinone(BaseBroker):
 
 
 if __name__ == "__main__":
-    ACCESS_TOKEN = access_token = os.environ["COINONE_ACCESS_TOKEN"]
-    SECRET_KEY = secret_key = bytes(os.environ["COINONE_SECRET_KEY"], "utf-8")
     print(access_token)
     coinone = Coinone()
 
     # print(coinone.orderbook('ada'))
-    print(coinone.price("ada"))
-    print(coinone.recent_trade("ada"))
-    balance = coinone.account_balance()
-    print(balance.get("ada"))
+    # print(coinone.price("ada"))
+    # print(coinone.recent_trade("ada"))
+    # balance = coinone.account_balance()
+    # print(balance.get("ada"))
     # print(balance.get('btc'))
     # print(balance.get('eth'))
 
     # print(coinone.buy('ada', 999, 11))
     # print(coinone.my_orders('ada'))
     # print(coinone.cancel_last_order('ada'))
+
+    print(coinone.trade_fee("btc"))

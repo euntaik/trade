@@ -8,14 +8,14 @@ import time
 import asyncio
 from urllib.parse import urlencode
 from decorators import private_api, public_api
-from broker import BaseBroker, Order
+from broker import *
 from termcolor import colored, cprint
 
 ACCESS_KEY = os.environ["UPBIT_OPEN_API_ACCESS_KEY"]
 SECRET_KEY = os.environ["UPBIT_OPEN_API_SECRET_KEY"]
 
 
-class Upbit(BaseBroker):
+class Upbit(BrokerBase):
     def __init__(self, version=1):
         self.server_url = "https://api.upbit.com"
         self.api_url = f"{self.server_url}/v{version}"
@@ -26,8 +26,8 @@ class Upbit(BaseBroker):
         method = requests.post if method == "POST" else requests.get
         url = f"{self.server_url}{api}"
         response = method(url, params=payload, headers=headers)
-        if response.status_code != 200:
-            cprint(response.text, color='red')
+        if response.status_code < 200 and response.status_code >= 300:
+            cprint(f"[{response.status_code}] {response.text}", color="red")
         return response.json()
 
     def request_public(self, api, payload=None, headers=None, method="GET"):
@@ -70,27 +70,44 @@ class Upbit(BaseBroker):
         query_hash = m.hexdigest()
 
         payload = {
-            'access_key': ACCESS_KEY,
-            'nonce': str(uuid.uuid4()),
-            'query_hash': query_hash,
-            'query_hash_alg': 'SHA512',
+            "access_key": ACCESS_KEY,
+            "nonce": str(uuid.uuid4()),
+            "query_hash": query_hash,
+            "query_hash_alg": "SHA512",
         }
 
         jwt_token = jwt.encode(payload, SECRET_KEY)
-        authorize_token = 'Bearer {}'.format(jwt_token)
+        authorize_token = "Bearer {}".format(jwt_token)
         headers = {"Authorization": authorize_token}
 
         return headers
 
     def check_order(self, uuid):
-        query = {"uuid" : uuid}
+        query = {"uuid": uuid}
         headers = self._get_authorization_header(query)
-        ret = self.request_private("/v1/orders", payload=query, headers=headers, method="GET")
+        ret = self.request_private(
+            "/v1/orders", payload=query, headers=headers, method="GET"
+        )
         if not ret:
             return None
         if type(ret) is list:
             ret = ret[0]
         return ret
+
+    @public_api
+    def trade_fee(self, symbol):
+        """
+        returns : trade fee in ratio (not in percentage... 0.0005 mean 0.05%)
+        """
+        symbol = self.__symbol(symbol)
+        query = {"market": symbol}
+        headers = self._get_authorization_header(query)
+        ret = self.request_private(
+            "/v1/orders/chance", payload=query, headers=headers, method="GET"
+        )
+        buy_fee = float(ret.get("bid_fee"))
+        sell_fee = float(ret.get("ask_fee"))
+        return max(buy_fee, sell_fee)
 
     @private_api
     def _order(self, order_type: Order, symbol, price, qty):
@@ -114,13 +131,13 @@ class Upbit(BaseBroker):
     def _order_complete(self, uuid):
         while True:
             status = self.check_order(uuid)
-            print('.', end='')
-            if status is None or status['state'] == 'done':
-                return status
+            print(".", end="")
+            if status is None or status["state"] == "done":
+                return True
             time.sleep(0.2)
 
     @private_api
-    def buy(self, symbol, price, qty, safety_check=True, sync=True):
+    def buy(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
         """
         params:
             sync: wait ultil the order goes through
@@ -128,32 +145,39 @@ class Upbit(BaseBroker):
         symbol = self.__symbol(symbol)
         if safety_check:
             if not self.check_buy_price(symbol, price):
-                return
+                return XactResult(Status.FAIL, {})
+
         ret = self._order(Order.BUY, symbol, price, qty)
 
+        result = XactResult(Status.WAITING, ret)
+
         if sync:
-            uuid = ret['uuid']
-            cprint(f'Waiting for order {uuid}', color='grey')
-            ret = self._order_complete(uuid)
-            cprint(f'Order complete!', color='grey')
-        
-        return ret
+            uuid = ret["uuid"]
+            cprint(f"Waiting for order {uuid}", color="grey")
+            self._order_complete(uuid)
+            cprint(f"Order complete!", color="grey")
+            result.status = Status.SUCCESS
+
+        return result
 
     @private_api
-    def sell(self, symbol, price, qty, safety_check=True, sync=True):
+    def sell(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
         symbol = self.__symbol(symbol)
         if safety_check:
             if not self.check_sell_price(symbol, price):
                 return
         ret = self._order(Order.SELL, symbol, price, qty)
 
+        result = XactResult(Status.WAITING, ret)
+
         if sync:
-            uuid = ret['uuid']
-            cprint(f'Waiting for order {uuid}', color='grey')
-            ret = self._order_complete(uuid)
-            cprint(f'Order complete!', color='grey')
-        
-        return ret
+            uuid = ret["uuid"]
+            cprint(f"Waiting for order {uuid}", color="grey")
+            self._order_complete(uuid)
+            cprint(f"Order complete!", color="grey")
+            result.status = Status.SUCCESS
+
+        return result
 
     @public_api
     def ticker(self, symbol):
@@ -166,7 +190,7 @@ class Upbit(BaseBroker):
         return float(self.ticker(symbol).get("acc_trade_volume"))
 
     @public_api
-    def price(self, symbol, detail=False):
+    def price(self, symbol, detail=False) -> float:
         payload = {"markets": {self.__symbol(symbol)}}
         data = self.request("/v1/ticker", payload=payload)
         data = data[0] if type(data) is list else data
@@ -265,15 +289,16 @@ if __name__ == "__main__":
     # print(ret)
     # ret = upbit.price('ADA')
     # print(ret)
-    print(upbit.candle("ada", "minutes"))
+    # print(upbit.candle("ada", "minutes"))
     # print(ret)
 
-    print(upbit.orderbook("ada"))
+    # print(upbit.orderbook("ada"))
 
-    print(upbit.account_balance())
-    print(upbit.possible_orders("ada"))
+    # print(upbit.account_balance())
+    # print(upbit.possible_orders("ada"))
 
-    print(upbit.price("ada"))
-    #print(upbit.buy("ada", 1580, 10))
+    # print(upbit.price("ada"))
+    # print(upbit.buy("ada", 1580, 10))
 
-    print(upbit.buy('dka', upbit.price('dka'), 50))
+    print(upbit.price("btc"))
+    print(upbit.trade_fee("btc"))
