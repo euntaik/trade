@@ -22,11 +22,11 @@ class XactResult:
 
 class BrokerBase(metaclass=ABCMeta):
     @abstractmethod
-    def buy(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
+    def buy(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         ...
 
     @abstractmethod
-    def sell(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
+    def sell(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         ...
 
     @abstractmethod
@@ -56,17 +56,13 @@ class BrokerBase(metaclass=ABCMeta):
     def check_buy_price(self, symbol, price):
         current_price = self.price(symbol)
         if float(price) > float(current_price):
-            print(
-                f"You were trying to BUY {symbol} at price({price}) higher than the current price({current_price})!"
-            )
+            print(f"You were trying to BUY {symbol} at price({price}) higher than the current price({current_price})!")
             return False
         return True
 
     def check_sell_price(self, symbol, price):
         current_price = self.price(symbol)
         if float(price) < float(current_price):
-            print(
-                f"You were trying to SELL {symbol} at price({price}) lower than the current price({current_price})!"
-            )
+            print(f"You were trying to SELL {symbol} at price({price}) lower than the current price({current_price})!")
             return False
         return True

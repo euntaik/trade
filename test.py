@@ -8,7 +8,6 @@ response = requests.request("GET", url, params=querystring)
 
 print(response.text)
 
-
 import os
 import jwt
 import uuid

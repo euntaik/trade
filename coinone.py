@@ -47,9 +47,7 @@ class Coinone(BrokerBase):
         }
 
         http = httplib2.Http()
-        response, content = http.request(
-            url, method, body=encoded_payload, headers=headers
-        )
+        response, content = http.request(url, method, body=encoded_payload, headers=headers)
 
         return json.loads(content)
 
@@ -75,47 +73,33 @@ class Coinone(BrokerBase):
         return ret
 
     @private_api
-    def buy(self, symbol, price, qty, safety_check=True) -> XactResult:
+    def buy(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         if safety_check:
             if not self.check_buy_price(symbol, price):
                 return XactResult(Status.FAIL, {})
 
-        ret = self.request_private(
-            "v2/order/limit_buy",
-            payload={"price": str(price), "qty": qty, "currency": symbol},
-        )
+        ret = self.request_private("v2/order/limit_buy", payload={"price": str(price), "qty": qty, "currency": symbol})
         return XactResult(Status.SUCCESS, ret)
 
     @private_api
-    def sell(self, symbol, price, qty, safety_check=True) -> XactResult:
+    def sell(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         if safety_check:
             if not self.check_sell_price(symbol, price):
                 return XactResult(Status.FAIL, {})
 
-        ret = self.request_private(
-            "v2/order/limit_buy",
-            payload={"price": str(price), "qty": qty, "currency": symbol},
-        )
+        ret = self.request_private("v2/order/limit_buy", payload={"price": str(price), "qty": qty, "currency": symbol})
         return XactResult(Status.SUCCESS, ret)
 
     @private_api
     def my_orders(self, symbol):
-        ret = self.request_private(
-            "v2/order/limit_orders", payload={"currency": symbol}
-        )
+        ret = self.request_private("v2/order/limit_orders", payload={"currency": symbol})
         return ret
 
     @private_api
     def cancel_order(self, symbol, order_id, price, qty, is_sell):
         ret = self.request_private(
             action="v2/order/cancel",
-            payload={
-                "order_id": order_id,
-                "price": price,
-                "qty": qty,
-                "is_ask": is_sell,
-                "currency": symbol,
-            },
+            payload={"order_id": order_id, "price": price, "qty": qty, "is_ask": is_sell, "currency": symbol},
         )
         return ret
 
@@ -125,13 +109,7 @@ class Coinone(BrokerBase):
         if len(orders):
             order = orders[0]
             is_sell = 1 if order.get("type") == "ask" else 0
-            return self.cancel_order(
-                symbol,
-                order.get("orderId"),
-                order.get("price"),
-                order.get("qty"),
-                is_sell,
-            )
+            return self.cancel_order(symbol, order.get("orderId"), order.get("price"), order.get("qty"), is_sell)
 
     @public_api
     def orderbook(self, symbol):

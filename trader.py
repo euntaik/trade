@@ -18,7 +18,7 @@ trade_volume = broker.volume_24h(symbol)
 cprint(f"Using Broker : {type(broker).__name__}", color="yellow", attrs=["bold"])
 cprint(f"Trading coin : {symbol.upper()}", color="yellow", attrs=["bold"])
 cprint(f"Current {symbol.upper()} price : {current_price}", color="yellow", attrs=["bold"])
-cprint(f"Current {symbol.upper()} trade volume : {trade_volume}", color="yellow", attrs=["bold"],)
+cprint(f"Current {symbol.upper()} trade volume : {trade_volume}", color="yellow", attrs=["bold"])
 cprint(f"Trading amount : {trade_won} KRW  {trade_qty} {symbol.upper()}", color="yellow", attrs=["bold"])
 
 
@@ -26,7 +26,11 @@ while True:
     start_trading_magic = "trade"
     start_simulate_magic = "simulate"
     simulation = True
-    cprint(f'Type "{start_trading_magic}" to do a real trading and type "{start_simulate_magic}" to do a simulation...', color="blue", attrs=["bold"])
+    cprint(
+        f'Type "{start_trading_magic}" to do a real trading and type "{start_simulate_magic}" to do a simulation...',
+        color="blue",
+        attrs=["bold"],
+    )
     confirm = input()
     if confirm == start_trading_magic:
         simulation = False

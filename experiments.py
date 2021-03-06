@@ -17,9 +17,7 @@ def method1():
 
         orderers_price = [0] * 15
         for i in range(15):
-            orderers_price[i] = (sum_sell_price[i] + sum_buy_price[i]) / (
-                sum_sell_count[i] + sum_buy_count[i]
-            )
+            orderers_price[i] = (sum_sell_price[i] + sum_buy_price[i]) / (sum_sell_count[i] + sum_buy_count[i])
 
         direction = [0] * 15
         for i in range(15):
@@ -28,9 +26,7 @@ def method1():
         current_price = upbit.price(symbol)
         trade_fee = current_price * 0.002
         expected_price = orderers_price[14]
-        print(
-            f"current price:{current_price} trade_fee:{trade_fee} expected_price:{expected_price}"
-        )
+        print(f"current price:{current_price} trade_fee:{trade_fee} expected_price:{expected_price}")
         if orderers_price[0] <= current_price and direction[0] < 0 and share_count > 1:
             print(f"Price going down. expected price={expected_price}")
             # sell
@@ -58,14 +54,8 @@ def method2():
         time.sleep(0.3)
         current_price = upbit.price(symbol)
         trade_fee = current_price * 0.002
-        print(
-            f"{current_price} > ({xaction_price} + {trade_fee}) and {last_xaction} == buy and {share_count}"
-        )
-        if (
-            current_price > (xaction_price + trade_fee)
-            and last_xaction == "buy"
-            and share_count > 0
-        ):
+        print(f"{current_price} > ({xaction_price} + {trade_fee}) and {last_xaction} == buy and {share_count}")
+        if current_price > (xaction_price + trade_fee) and last_xaction == "buy" and share_count > 0:
             # sell
             print(f"SELL at {current_price}")
             net_profit += current_price - trade_fee
