@@ -1,12 +1,8 @@
-from upbit import Upbit
-from coinone import Coinone
-from broker import *
 import time
 from termcolor import colored, cprint
-from trade_algo import *
 
 
-def simple_sell_after_buy(broker: BrokerBase, symbol, trade_qty, simulation=True):
+def simple_sell_after_buy(broker, symbol, trade_qty, simulation=True):
     net_profit = 0
     share_count = 0
     last_xaction = "sell"

@@ -16,14 +16,17 @@ export UPBIT_OPEN_API_SECRET_KEY=[your upbit open api secret key]
 
 example
 ```
-from upbit import Upbit
-from coinone import Coinone
+from broker.broker import Broker
 
-
-
-# configuration
-Broker = Coinone
 broker = Broker()
 
+# check current price
 broker.price('ada')
+
+# buy
+broker.buy('ada', price=1205, qty=10)
+
+# sell
+broker.sell('ada', price=1300, qty=10)
+
 ```

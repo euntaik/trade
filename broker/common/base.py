@@ -1,26 +1,12 @@
-from enum import Enum, auto
 from abc import *
-from dataclasses import dataclass
-
-
-class Order(Enum):
-    BUY = auto()
-    SELL = auto()
-
-
-class Status(Enum):
-    SUCCESS = auto()
-    WAITING = auto()
-    FAIL = auto()
-
-
-@dataclass
-class XactResult:
-    status: Status
-    detail: dict
+from broker.common.types import *
 
 
 class BrokerBase(metaclass=ABCMeta):
+    @abstractmethod
+    def __init__(self, access_key=None, secret_key=None):
+        ...
+
     @abstractmethod
     def buy(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         ...

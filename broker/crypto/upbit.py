@@ -7,8 +7,8 @@ import hashlib
 import time
 import asyncio
 from urllib.parse import urlencode
-from decorators import private_api, public_api
-from broker import *
+from broker.common.decorators import private_api, public_api
+from broker.common.base import *
 from termcolor import colored, cprint
 
 ACCESS_KEY = os.environ["UPBIT_OPEN_API_ACCESS_KEY"]
@@ -16,11 +16,13 @@ SECRET_KEY = os.environ["UPBIT_OPEN_API_SECRET_KEY"]
 
 
 class Upbit(BrokerBase):
-    def __init__(self, version=1):
+    def __init__(self, access_key=None, secret_key=None, version=1):
         self.server_url = "https://api.upbit.com"
         self.api_url = f"{self.server_url}/v{version}"
         self.market = {}
         self.waitloop = asyncio.get_event_loop()
+        self.access_key = access_key if access_key else ACCESS_KEY
+        self.secret_key = secret_key if secret_key else SECRET_KEY
 
     def request(self, api, payload=None, headers=None, method="GET"):
         method = requests.post if method == "POST" else requests.get
@@ -54,8 +56,8 @@ class Upbit(BrokerBase):
 
     @private_api
     def account_balance(self):
-        payload = {"access_key": ACCESS_KEY, "nonce": str(uuid.uuid4())}
-        jwt_token = jwt.encode(payload, SECRET_KEY)
+        payload = {"access_key": self.access_key, "nonce": str(uuid.uuid4())}
+        jwt_token = jwt.encode(payload, self.secret_key)
         authorize_token = "Bearer {}".format(jwt_token)
         print(authorize_token)
         headers = {"Authorization": authorize_token}
@@ -70,13 +72,13 @@ class Upbit(BrokerBase):
         query_hash = m.hexdigest()
 
         payload = {
-            "access_key": ACCESS_KEY,
+            "access_key": self.access_key,
             "nonce": str(uuid.uuid4()),
             "query_hash": query_hash,
             "query_hash_alg": "SHA512",
         }
 
-        jwt_token = jwt.encode(payload, SECRET_KEY)
+        jwt_token = jwt.encode(payload, self.secret_key)
         authorize_token = "Bearer {}".format(jwt_token)
         headers = {"Authorization": authorize_token}
 
@@ -275,13 +277,13 @@ class Upbit(BrokerBase):
         query_hash = m.hexdigest()
 
         payload = {
-            "access_key": ACCESS_KEY,
+            "access_key": self.access_key,
             "nonce": str(uuid.uuid4()),
             "query_hash": query_hash,
             "query_hash_alg": "SHA512",
         }
 
-        jwt_token = jwt.encode(payload, SECRET_KEY)
+        jwt_token = jwt.encode(payload, self.secret_key)
         authorize_token = "Bearer {}".format(jwt_token)
         headers = {"Authorization": authorize_token}
         return self.request("/v1/orders/chance", payload=query, headers=headers)

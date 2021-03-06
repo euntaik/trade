@@ -9,18 +9,20 @@ import httplib2
 import time
 import base64
 import hmac
-from broker import *
-from decorators import private_api, public_api
+from broker.common.decorators import private_api, public_api
+from broker.common.base import *
 
-ACCESS_TOKEN = access_token = os.environ["COINONE_ACCESS_TOKEN"]
-SECRET_KEY = secret_key = bytes(os.environ["COINONE_SECRET_KEY"], "utf-8")
+ACCESS_TOKEN = os.environ["COINONE_ACCESS_TOKEN"]
+SECRET_KEY = bytes(os.environ["COINONE_SECRET_KEY"], "utf-8")
 
 
 class Coinone(BrokerBase):
-    def __init__(self, version=1):
+    def __init__(self, access_key=None, secret_key=None, version=1):
         self.server_url = "https://api.coinone.co.kr/"
         self.api_url = f"{self.server_url}"
         self.market = {}
+        self.access_key = access_key if access_key else ACCESS_TOKEN
+        self.secret_key = bytes(secret_key) if secret_key else SECRET_KEY
 
     def __get_encoded_payload(self, payload):
         payload["nonce"] = int(time.time() * 1000)
@@ -30,13 +32,13 @@ class Coinone(BrokerBase):
         return encoded_json
 
     def __get_signature(self, encoded_payload):
-        signature = hmac.new(SECRET_KEY, encoded_payload, hashlib.sha512)
+        signature = hmac.new(self.secret_key, encoded_payload, hashlib.sha512)
         return signature.hexdigest()
 
     def request_private(self, action, payload, method="POST"):
         url = f"{self.api_url}{action}"
         if "access_token" not in payload:
-            payload["access_token"] = ACCESS_TOKEN
+            payload["access_token"] = self.access_key
 
         encoded_payload = self.__get_encoded_payload(payload)
 
@@ -58,7 +60,6 @@ class Coinone(BrokerBase):
         ret = json.loads(response.text)
         return ret
 
-    @private_api
     @private_api
     def trade_fee(self, symbol):
         payload = {"currency": symbol}

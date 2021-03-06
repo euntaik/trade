@@ -1,12 +1,10 @@
-from upbit import Upbit
-from coinone import Coinone
+from broker.broker import Broker
 import time
 from termcolor import colored, cprint
-from trade_algo import *
+from algo.simple import *
 
 # configuration
-Broker = Upbit
-broker = Broker()
+broker = Broker("Coinone")
 trading_algorithm = simple_sell_after_buy
 symbol = "btc"
 current_price = broker.price(symbol)
