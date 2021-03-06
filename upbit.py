@@ -139,7 +139,7 @@ class Upbit(BrokerBase):
         return ret
 
     @private_api
-    def buy(self, symbol, price, qty, safety_check=True, sync=True, timeout=2) -> XactResult:
+    def buy(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         """
         params:
             sync: wait ultil the order goes through
@@ -165,7 +165,7 @@ class Upbit(BrokerBase):
         return result
 
     @private_api
-    def sell(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
+    def sell(self, symbol, price, qty, safety_check=True, sync=True, timeout=0) -> XactResult:
         symbol = self.__symbol(symbol)
         if safety_check:
             if not self.check_sell_price(symbol, price):
@@ -176,8 +176,12 @@ class Upbit(BrokerBase):
 
         if sync:
             uuid = ret["uuid"]
-            self._wait_order_complete(uuid)
-            result.status = Status.SUCCESS
+            order_complete = self._wait_order_complete(uuid, timeout=timeout)
+            if not order_complete:
+                self.cancel_order(uuid)
+                result.status = Status.FAIL
+            else:
+                result.status = Status.SUCCESS
 
         return result
 
