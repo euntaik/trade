@@ -18,7 +18,7 @@ example
 ```
 from broker.broker import Broker
 
-broker = Broker()
+broker = Broker('upbit')
 
 # check current price
 broker.price('ada')
