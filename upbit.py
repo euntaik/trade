@@ -85,9 +85,7 @@ class Upbit(BrokerBase):
     def check_order(self, uuid):
         query = {"uuid": uuid}
         headers = self._get_authorization_header(query)
-        ret = self.request_private(
-            "/v1/order", payload=query, headers=headers, method="GET"
-        )
+        ret = self.request_private("/v1/order", payload=query, headers=headers, method="GET")
         if not ret:
             return None
         if type(ret) is list:
@@ -102,9 +100,7 @@ class Upbit(BrokerBase):
         symbol = self.__symbol(symbol)
         query = {"market": symbol}
         headers = self._get_authorization_header(query)
-        ret = self.request_private(
-            "/v1/orders/chance", payload=query, headers=headers, method="GET"
-        )
+        ret = self.request_private("/v1/orders/chance", payload=query, headers=headers, method="GET")
         buy_fee = float(ret.get("bid_fee"))
         sell_fee = float(ret.get("ask_fee"))
         return max(buy_fee, sell_fee)
@@ -114,33 +110,36 @@ class Upbit(BrokerBase):
             order = "bid"
         elif order_type == Order.SELL:
             order = "ask"
-        query = {
-            "market": symbol,
-            "side": order,
-            "volume": qty,
-            "price": price,
-            "ord_type": "limit",
-        }
+        query = {"market": symbol, "side": order, "volume": qty, "price": price, "ord_type": "limit"}
         headers = self._get_authorization_header(query)
 
-        return self.request_private(
-            "/v1/orders", payload=query, headers=headers, method="POST"
-        )
+        return self.request_private("/v1/orders", payload=query, headers=headers, method="POST")
 
-    def _wait_order_complete(self, uuid):
+    def _wait_order_complete(self, uuid, timeout=0):
         cprint(f"Waiting for order {uuid}")
+        t = 0
         while True:
             status = self.check_order(uuid)
             print(".", end="")
-            if status is None or status["state"] == "done":
+            if status is None or status["state"] == "done" or status["state"] == "cancel":
                 print()
                 break
             time.sleep(0.2)
+            t += 0.2
+            if timeout and t > timeout:
+                return False
         cprint(f"Order complete!")
-        return
+        return True
 
     @private_api
-    def buy(self, symbol, price, qty, safety_check=True, sync=True) -> XactResult:
+    def cancel_order(self, uuid):
+        query = {"uuid": uuid}
+        headers = self._get_authorization_header(query)
+        ret = self.request_private("/v1/order", payload=query, headers=headers, method="DELETE")
+        return ret
+
+    @private_api
+    def buy(self, symbol, price, qty, safety_check=True, sync=True, timeout=2) -> XactResult:
         """
         params:
             sync: wait ultil the order goes through
@@ -156,8 +155,12 @@ class Upbit(BrokerBase):
 
         if sync:
             uuid = ret["uuid"]
-            self._wait_order_complete(uuid)
-            result.status = Status.SUCCESS
+            order_complete = self._wait_order_complete(uuid, timeout=timeout)
+            if not order_complete:
+                self.cancel_order(uuid)
+                result.status = Status.FAIL
+            else:
+                result.status = Status.SUCCESS
 
         return result
 
@@ -301,4 +304,4 @@ if __name__ == "__main__":
 
     print(upbit.price("btc"))
     print(upbit.trade_fee("btc"))
-    print(upbit.check_order('f8aa1ed2-f021-4c40-95b9-6f51fa01ed79'))
+    print(upbit.check_order("5e00bda8-e057-4ea4-a917-e160e01d585d"))
